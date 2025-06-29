@@ -1,4 +1,4 @@
-from django.shortcuts import render
+
 import requests
 from django.shortcuts import render, redirect
 from bs4 import BeautifulSoup as BSoup
@@ -6,39 +6,57 @@ from news.models import Headline
 
 # Create your views here.
 
+import feedparser
+from news.models import Headline
+
 
 def scrape(request, name):
     Headline.objects.all().delete()
-    session = requests.Session()
-    session.headers = {"User-Agent": "Googlebot/2.1 (+http://www.google.com/bot.html)"}
-    url = f"https://www.theonion.com/{name}"
-    content = session.get(url).content
-    soup = BSoup(content, "html.parser")
 
-    News = soup.find_all("div", {"class": "sc-cw4lnv-13 hHSpAQ"})
+    rss_urls = {
+    "latest": "http://feeds.bbci.co.uk/news/world/rss.xml",
+    "sports": "http://feeds.bbci.co.uk/sport/rss.xml",
+    "politics": "https://www.theguardian.com/world/rss",
+    "tech": "https://hnrss.org/frontpage",
+    "entertainment": "http://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+}
+    print("📰 Scraping news for:", name)  # 👀 LOG IT
 
-    for article in News:
-        main = article.find_all("a", href=True)
+    feed_url = rss_urls.get(name)
+    if not feed_url:
+        return redirect("/")
 
-        linkx = article.find("a", {"class": "sc-1out364-0 dPMosf js_link"})
-        link = linkx["href"]
+    feed = feedparser.parse(feed_url)
 
-        titlex = article.find("h2", {"class": "sc-759qgu-0 cvZkKd sc-cw4lnv-6 TLSoz"})
-        title = titlex.text
+    for entry in feed.entries:
+        title = entry.title
+        link = entry.link
+        image = None
+        if "media_content" in entry:
+            image = entry.media_content[0].get("url")
+        elif "media_thumbnail" in entry:
+            image = entry.media_thumbnail[0].get("url")
+        elif "summary" in entry:
+            soup = BeautifulSoup(entry.summary, "html.parser")
+            img_tag = soup.find("img")
+            if img_tag:
+                image = img_tag.get("src")
 
-        imgx = article.find("img")["data-src"]
+        print("Image URL:", image)  # 👀 LOG IT
 
-        new_headline = Headline()
-        new_headline.title = title
-        new_headline.url = link
-        new_headline.image = imgx
-        new_headline.save()
-    return redirect("../")
+        if not image:
+            image = "https://via.placeholder.com/300x200.png?text=No+Image"
+
+        Headline.objects.create(title=title, url=link, image=image)
+
+    return redirect("/")
 
 
 def news_list(request):
+    print("🎯 Home view hit")  # just to see if it prints in terminal
     headlines = Headline.objects.all()[::-1]
     context = {
         "object_list": headlines,
     }
     return render(request, "news/home.html", context)
+

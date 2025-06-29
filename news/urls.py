@@ -4,3 +4,5 @@ urlpatterns = [
   path('scrape/<str:name>', scrape, name="scrape"),
   path('', news_list, name="home"),
 ]
+
+
