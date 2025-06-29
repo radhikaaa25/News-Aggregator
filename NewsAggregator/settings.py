@@ -27,8 +27,9 @@ SECRET_KEY = 'xe4hmfwal+58e7@8u@&g^x2xsow_hyv7%m3wmk^o4u(%+!73cw'
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Application definition
 
 INSTALLED_APPS = [
